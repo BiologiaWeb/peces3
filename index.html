@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FCB — Gestión de Estanques</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════ LOGIN ══════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-header">
+      <div class="auth-logo-wrap">
+        <img src="logo_fcb.png" alt="FCB" class="auth-logo-img"
+             onerror="this.style.display='none';document.getElementById('auth-logo-fallback').style.display='flex'"/>
+        <div id="auth-logo-fallback" class="auth-logo-fallback" style="display:none">FCB</div>
+      </div>
+      <div class="auth-sub">Facultad de Ciencias Biológicas</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Usuario</label>
+      <input id="login-user" type="text" class="form-control" placeholder="Usuario" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Contraseña</label>
+      <input id="login-pass" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.75rem" onclick="doLogin()">
+      Ingresar
+    </button>
+    <div id="login-error" style="display:none;margin-top:.75rem;color:var(--red);font-size:.82rem;text-align:center;padding:.4rem .75rem;background:#fef2f2;border-radius:var(--radius);border:1px solid #fecaca"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ APP ════════════════════════════════════ -->
+<div id="app-screen">
+
+  <header>
+    <div class="logo logo-fcb">
+      <img src="logo_fcb.png" alt="FCB" class="header-logo-img" onerror="this.style.display='none'"/>
+      <span class="logo-fcb-siglas">Facultad de Ciencias Biológicas</span>
+      <span id="header-area-badge" style="display:none"></span>
+    </div>
+    <div class="user-pill" onclick="doLogout()" title="Cerrar sesión">
+      <div class="avatar" id="user-avatar">?</div>
+      <span id="user-name-header">Usuario</span>
+      <span style="color:var(--text-lt)">· salir</span>
+    </div>
+  </header>
+
+  <nav>
+    <div class="tab active" onclick="switchTab(event,'ponds')">Estanques</div>
+    <div class="tab" onclick="switchTab(event,'log')">Bitácora</div>
+    <div class="tab" onclick="switchTab(event,'fish')">Fauna</div>
+    <div class="tab" id="tab-users" style="display:none" onclick="switchTab(event,'users')">Usuarios</div>
+    <div class="tab" id="tab-exps"  style="display:none" onclick="switchTab(event,'exps')">Expedientes</div>
+    <div class="tab" id="tab-params" style="display:none" onclick="switchTab(event,'params')">Parámetros</div>
+  </nav>
+
+  <main>
+
+    <!-- ── ESTANQUES ── -->
+    <div id="page-ponds" class="page active">
+      <div class="section-header">
+        <div class="section-title">Estanques <small>estado y gestión</small></div>
+        <div id="pond-admin-btns" style="display:none;gap:.6rem;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="openRegisterActionGlobal()">+ Registrar acción</button>
+          <button class="btn btn-primary" onclick="openAddPond()">+ Nuevo estanque</button>
+        </div>
+      </div>
+      <div id="pond-grid" class="grid-ponds">
+        <div class="empty"><div class="icon">~</div><p>Cargando estanques…</p></div>
+      </div>
+    </div>
+
+    <!-- ── BITÁCORA ── -->
+    <div id="page-log" class="page">
+      <div class="section-header">
+        <div class="section-title">Bitácora <small>historial de actividades</small></div>
+        <button class="btn btn-primary" onclick="downloadLogCSV()">Descargar CSV</button>
+      </div>
+      <div class="filter-row">
+        <select id="filter-pond"   class="form-control" onchange="loadLog()"><option value="">Todos los estanques</option></select>
+        <select id="filter-action" class="form-control" onchange="loadLog()">
+          <option value="">Todas las acciones</option>
+          <option value="alimentación">Alimentación</option>
+          <option value="limpieza">Limpieza</option>
+          <option value="tratamiento">Tratamiento</option>
+          <option value="cambio de agua">Cambio de agua</option>
+          <option value="medición">Medición</option>
+          <option value="mortalidad"   class="log-filter-sup-only">Mortalidad</option>
+          <option value="nacimiento"   class="log-filter-sup-only">Nacimiento</option>
+          <option value="introducción" class="log-filter-sup-only">Introducción</option>
+          <option value="otro">Otro</option>
+        </select>
+        <select id="filter-user" class="form-control log-filter-sup-only" onchange="loadLog()" style="display:none">
+          <option value="">Todos los responsables</option>
+        </select>
+        <input type="date" id="filter-date-from" class="form-control" onchange="loadLog()" title="Desde"/>
+        <input type="date" id="filter-date-to"   class="form-control" onchange="loadLog()" title="Hasta"/>
+      </div>
+      <div class="table-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Fecha / Hora</th>
+              <th>Estanque</th>
+              <th>Acción</th>
+              <th>Detalle</th>
+              <th>Responsable</th>
+            </tr>
+          </thead>
+          <tbody id="log-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-lt)">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── FAUNA ── -->
+    <div id="page-fish" class="page">
+      <div class="section-header">
+        <div class="section-title">Fauna <small>inventario por estanque</small></div>
+        <div id="fish-admin-btns" style="display:none;gap:.6rem;flex-wrap:wrap">
+          <button class="btn btn-ghost" id="btn-add-units-fish" onclick="openAddUnitsFish()">+ Agregar fauna</button>
+          <button class="btn btn-primary" onclick="openCreateFish()">+ Crear especie</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <select id="filter-fish-pond" class="form-control" onchange="loadFishView()"><option value="">Todos los estanques</option></select>
+      </div>
+      <div class="fish-list-wrap">
+        <div id="fish-list"><div class="empty"><div class="icon">·</div><p>Cargando fauna…</p></div></div>
+      </div>
+    </div>
+
+    <!-- ── USUARIOS (solo admin) ── -->
+    <div id="page-users" class="page">
+      <div class="section-header">
+        <div class="section-title">Usuarios <small>gestión de acceso</small></div>
+        <button class="btn btn-primary" onclick="openAddUser()">+ Nuevo usuario</button>
+      </div>
+      <div class="table-wrap">
+        <table class="log-table">
+          <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Área</th><th>Supervisor</th><th>Creado</th><th>Acciones</th></tr></thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-lt)">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ══ EXPEDIENTES (solo mortalidad) ══ -->
+    <div id="page-exps" class="page">
+      <div class="section-header">
+        <div class="section-title">Expedientes <small>registro de mortalidad</small></div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="downloadExpCSV()">↓ CSV</button>
+          <button class="btn btn-primary" onclick="openNewExp()">+ Nuevo expediente</button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-row">
+        <input id="exp-filter-q"    class="form-control" placeholder="Buscar especie u observaciones…" oninput="filterExps()"/>
+        <select id="exp-filter-area" class="form-control" onchange="filterExps()">
+          <option value="">Todas las áreas</option>
+          <option value="Conservación">Conservación</option>
+          <option value="Aprovechamiento">Aprovechamiento</option>
+        </select>
+        <input id="exp-filter-from" type="date" class="form-control" onchange="filterExps()" title="Desde"/>
+        <input id="exp-filter-to"   type="date" class="form-control" onchange="filterExps()" title="Hasta"/>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-wrap">
+        <table class="log-table" style="font-size:.76rem">
+          <thead><tr>
+            <th>ID</th><th>Fecha</th><th>Especie</th><th>Cant.</th>
+            <th>Área</th><th>Acuario</th><th>Colectó</th><th>Entregó</th>
+            <th>Se procede a</th><th>Observaciones</th>
+            <th>Realizó proceso</th><th>Realizó ficha</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="exp-tbody">
+            <tr><td colspan="13" style="text-align:center;padding:2rem;color:var(--text-lt)">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ══ PARÁMETROS (solo mortalidad) ══ -->
+    <div id="page-params" class="page">
+      <div class="section-header">
+        <div class="section-title">Parámetros <small>pH y temperatura</small></div>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="downloadParamsCSV()">↓ CSV</button>
+          <button class="btn btn-ghost" id="btn-gestionar-areas" style="display:none" onclick="openGestionAreas()">⚙ Gestionar áreas</button>
+          <button class="btn btn-primary" onclick="openIniciarSesion()">+ Iniciar parámetros</button>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-row">
+        <select id="param-filter-area" class="form-control" onchange="onParamAreaChange()">
+          <option value="">Todas las áreas</option>
+          <option value="conservacion_piletas">Conservación — Piletas</option>
+          <option value="conservacion_tc">Conservación — Temp. Controlada</option>
+          <option value="conservacion_frio">Conservación — Temperaria Fría</option>
+          <option value="urin_tc">URIN — Temp. Controlada</option>
+          <option value="urin_piletas">URIN — Piletas Exterior</option>
+        </select>
+        <select id="param-filter-sector" class="form-control" onchange="filterParams()">
+          <option value="">Todos los sectores</option>
+        </select>
+        <select id="param-filter-pileta" class="form-control" onchange="filterParams()">
+          <option value="">Todas las piletas</option>
+        </select>
+        <input id="param-filter-from" type="date" class="form-control" onchange="filterParams()" title="Desde"/>
+        <input id="param-filter-to"   type="date" class="form-control" onchange="filterParams()" title="Hasta"/>
+      </div>
+
+      <!-- Sesión activa banner -->
+      <div id="sesion-activa-banner" style="display:none;background:var(--brand-lt);border:1px solid var(--brand);border-radius:var(--radius);padding:.6rem 1rem;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+        <div>
+          <strong style="color:var(--brand)">Sesión activa</strong>
+          <span id="sesion-activa-info" style="font-size:.82rem;color:var(--text-md);margin-left:.5rem"></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openRegistrarParametro()">+ Registrar pileta</button>
+      </div>
+
+      <!-- Tabla bitácora -->
+      <div class="table-wrap">
+        <table class="log-table">
+          <thead><tr>
+            <th>Fecha</th><th>Área</th><th>Sector</th><th>Pileta</th>
+            <th>pH</th><th>Temp. °C</th>
+            <th>Realizado por</th>
+          </tr></thead>
+          <tbody id="params-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-lt)">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /app-screen -->
+
+<!-- ══════════════════════════════════ MODALES ════════════════════════════════ -->
+
+<!-- Nuevo / Editar estanque -->
+<div class="modal-bg" id="modal-add-pond">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="pond-modal-title">Nuevo Estanque</div>
+      <button class="modal-close" onclick="closeModal('modal-add-pond')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pond-edit-id"/>
+      <div class="form-group"><label class="form-label">Nombre</label><input id="pond-name" class="form-control" placeholder="..."/></div>
+      <div class="form-group"><label class="form-label">Tipo / uso</label><input id="pond-type" class="form-control" placeholder="..."/></div>
+      <div class="form-group"><label class="form-label">Capacidad (litros)</label><input id="pond-cap" type="number" class="form-control" placeholder="..."/></div>
+      <div class="form-group"><label class="form-label">Notas</label><textarea id="pond-notes" class="form-control" placeholder="..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-pond')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-pond" onclick="savePond()">Guardar estanque</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detalle de estanque -->
+<div class="modal-bg" id="modal-pond-detail">
+  <div class="modal modal-wide">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="pond-detail-title">Estanque</div>
+      <button class="modal-close" onclick="closeModal('modal-pond-detail')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="pond-detail-info" class="pond-detail-info"></div>
+      <div class="pond-detail-section-title">Bitácora del día</div>
+      <div id="pond-detail-log" class="pond-detail-log">
+        <p style="color:var(--text-lt);font-size:.82rem">Cargando…</p>
+      </div>
+      <div style="margin-top:1.2rem;display:flex;gap:.6rem;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openActionFromDetail()">+ Registrar acción</button>
+        <div id="pond-detail-admin-btns" style="display:none;gap:.5rem">
+          <button class="btn btn-ghost" onclick="editPondFromDetail()">Editar estanque</button>
+          <button class="btn btn-danger" onclick="deletePondFromDetail()">✕ Eliminar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pond-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Registrar acción (general) -->
+<div class="modal-bg" id="modal-action">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title">Registrar Acción</div>
+      <button class="modal-close" onclick="closeModal('modal-action')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" id="action-pond-selector-group">
+        <label class="form-label">Estanque</label>
+        <select id="action-pond" class="form-control" onchange="onActionPondChange()"></select>
+      </div>
+      <div class="form-group" id="action-pond-fixed-group" style="display:none">
+        <label class="form-label">Estanque</label>
+        <div id="action-pond-fixed-name" style="padding:.55rem .75rem;background:var(--bg-main);border:1.5px solid var(--border);border-radius:var(--radius);font-weight:700;color:var(--brand)"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de acción</label>
+        <select id="action-type" class="form-control" onchange="onActionTypeChange()">
+          <option value="alimentación">Alimentación</option>
+          <option value="limpieza">Limpieza</option>
+          <option value="tratamiento">Tratamiento</option>
+          <option value="cambio de agua">Cambio de agua</option>
+          <option value="medición">Medición de parámetros</option>
+          <option value="otro">Otro</option>
+          <!-- Las siguientes solo supervisor/admin, se ocultan para operador -->
+          <option value="mortalidad" class="action-sup-only">Mortalidad</option>
+          <option value="nacimiento" class="action-sup-only">Nacimiento</option>
+          <option value="introducción" class="action-sup-only">Introducción de especies</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Detalle / Notas</label><textarea id="action-notes" class="form-control" placeholder="..."></textarea></div>
+
+      <!-- Campos especiales: Mortalidad -->
+      <div id="mortality-fields" style="display:none">
+        <div class="action-panel action-panel--mortality">
+          <div class="action-panel-header">
+            <span class="action-panel-icon">↓</span>
+            <span>Datos de mortalidad</span>
+          </div>
+          <div class="action-panel-body">
+            <div class="action-panel-hint">Al guardar, se reducirá automáticamente el conteo de la especie seleccionada.</div>
+            <div class="form-group">
+              <label class="form-label">Especie (nombre común)</label>
+              <select id="mort-fish" class="form-control" onchange="onMortFishChange()"><option value="">— Selecciona especie —</option></select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+              <div class="form-group" style="margin:0">
+                <label class="form-label">Categoría</label>
+                <select id="mort-cat" class="form-control">
+                  <option value="alevines">Alevines</option>
+                  <option value="juveniles">Juveniles</option>
+                  <option value="adultos">Adultos</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label class="form-label">Cantidad fallecida</label>
+                <input id="mort-qty" type="number" min="1" class="form-control" placeholder="..."/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos especiales: Nacimiento -->
+      <div id="birth-fields" style="display:none">
+        <div class="action-panel action-panel--birth">
+          <div class="action-panel-header">
+            <span class="action-panel-icon">↑</span>
+            <span>Datos de nacimiento</span>
+          </div>
+          <div class="action-panel-body">
+            <div class="action-panel-hint">Los nacimientos se registran como <strong>Alevines</strong> y se suman automáticamente al total.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+              <div class="form-group" style="margin:0">
+                <label class="form-label">Especie (nombre común)</label>
+                <select id="birth-fish" class="form-control"><option value="">— Selecciona especie —</option></select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label class="form-label">Cantidad nacida</label>
+                <input id="birth-qty" type="number" min="1" class="form-control" placeholder="..."/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos especiales: Introducción -->
+      <div id="intro-fields" style="display:none">
+        <div class="action-panel action-panel--intro">
+          <div class="action-panel-header">
+            <span class="action-panel-icon">+</span>
+            <span>Introducción de especies</span>
+          </div>
+          <div class="action-panel-body">
+            <div class="form-group">
+              <label class="form-label">Tipo de introducción</label>
+              <div class="intro-type-toggle">
+                <label class="intro-type-opt">
+                  <input type="radio" name="intro-type-radio" value="nueva" checked onchange="onIntroTypeChange()"/>
+                  <span>Especie nueva</span>
+                </label>
+                <label class="intro-type-opt">
+                  <input type="radio" name="intro-type-radio" value="existente" onchange="onIntroTypeChange()"/>
+                  <span>Ya existe en estanque</span>
+                </label>
+              </div>
+              <input type="hidden" id="intro-type" value="nueva"/>
+            </div>
+            <!-- Especie existente -->
+            <div id="intro-existing-fields" style="display:none">
+              <div class="form-group">
+                <label class="form-label">Especie (nombre común)</label>
+                <select id="intro-fish" class="form-control"><option value="">— Selecciona especie —</option></select>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Categoría</label>
+                  <select id="intro-cat" class="form-control">
+                    <option value="alevines">Alevines</option>
+                    <option value="juveniles">Juveniles</option>
+                    <option value="adultos">Adultos</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Cantidad</label>
+                  <input id="intro-qty-existing" type="number" min="1" class="form-control" placeholder="..."/>
+                </div>
+              </div>
+            </div>
+            <!-- Especie nueva -->
+            <div id="intro-new-fields">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Nombre común</label>
+                  <input id="intro-name" class="form-control" placeholder="..."/>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label">Especie científica</label>
+                  <input id="intro-species" class="form-control" placeholder="..."/>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notas</label>
+                <textarea id="intro-fish-notes" class="form-control" placeholder="..." style="min-height:60px"></textarea>
+              </div>
+              <div class="action-panel-hint" style="margin-bottom:.5rem">Cantidad inicial por categoría</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+                <div class="form-group" style="margin:0">
+                  <label class="form-label cat-alevin" style="border-radius:4px;padding:1px 6px;display:inline-block;margin-bottom:4px">Alevines</label>
+                  <input id="intro-qty-alevin" type="number" min="0" class="form-control" placeholder="0"/>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label cat-juvenil" style="border-radius:4px;padding:1px 6px;display:inline-block;margin-bottom:4px">Juveniles</label>
+                  <input id="intro-qty-juvenil" type="number" min="0" class="form-control" placeholder="0"/>
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label class="form-label cat-adulto" style="border-radius:4px;padding:1px 6px;display:inline-block;margin-bottom:4px">Adultos</label>
+                  <input id="intro-qty-adulto" type="number" min="0" class="form-control" placeholder="0"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-action')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveAction()">Guardar acción</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detalle de fauna -->
+<div class="modal-bg" id="modal-fish-detail">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title">Información de Fauna</div>
+      <button class="modal-close" onclick="closeModal('modal-fish-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="fish-detail-body"></div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <div id="fish-detail-admin-btns" style="display:none;gap:.5rem">
+        <button class="btn btn-ghost" onclick="openEditFish()">Editar</button>
+        <button class="btn btn-danger" onclick="deleteFishFromDetail()">✕ Eliminar</button>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-fish-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Crear especie (admin/supervisor) -->
+<div class="modal-bg" id="modal-create-fish">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="create-fish-title">Crear Especie</div>
+      <button class="modal-close" onclick="closeModal('modal-create-fish')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="create-fish-edit-id"/>
+      <div class="form-group"><label class="form-label">Estanque</label><select id="create-fish-pond" class="form-control"></select></div>
+      <div class="form-group"><label class="form-label">Nombre común</label><input id="create-fish-name" class="form-control" placeholder="..."/></div>
+      <div class="form-group"><label class="form-label">Especie científica (opcional)</label><input id="create-fish-species" class="form-control" placeholder="..."/></div>
+      <div class="form-group"><label class="form-label">Notas / Descripción</label><textarea id="create-fish-notes" class="form-control" placeholder="..."></textarea></div>
+      <div class="form-section-title">Cantidad inicial por categoría</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Alevines</label>
+          <input id="create-fish-alevin" type="number" min="0" class="form-control" value="0"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Juveniles</label>
+          <input id="create-fish-juvenil" type="number" min="0" class="form-control" value="0"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Adultos</label>
+          <input id="create-fish-adulto" type="number" min="0" class="form-control" value="0"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-create-fish')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-create-fish" onclick="saveCreateFish()">Guardar especie</button>
+    </div>
+  </div>
+</div>
+
+<!-- Agregar unidades a especie existente -->
+<div class="modal-bg" id="modal-add-units-fish">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title">Agregar Fauna</div>
+      <button class="modal-close" onclick="closeModal('modal-add-units-fish')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-box">Selecciona un estanque y la especie existente para sumar unidades por categoría.</div>
+      <div class="form-group">
+        <label class="form-label">Estanque</label>
+        <select id="add-units-pond" class="form-control" onchange="onAddUnitsPondChange()"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Especie (nombre común)</label>
+        <select id="add-units-fish" class="form-control" onchange="onAddUnitsFishChange()">
+          <option value="">— Selecciona estanque primero —</option>
+        </select>
+      </div>
+      <div id="add-units-cats" style="display:none">
+        <div class="form-section-title">Cantidad a agregar por categoría</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Alevines</label>
+            <input id="add-units-alevin" type="number" min="0" class="form-control" value="0"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Juveniles</label>
+            <input id="add-units-juvenil" type="number" min="0" class="form-control" value="0"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Adultos</label>
+            <input id="add-units-adulto" type="number" min="0" class="form-control" value="0"/>
+          </div>
+        </div>
+        <div id="add-units-current" class="form-hint" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-units-fish')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAddUnitsFish()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nuevo usuario -->
+<div class="modal-bg" id="modal-add-user">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="add-user-modal-title">Nuevo Usuario</div>
+      <button class="modal-close" onclick="closeModal('modal-add-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nombre completo</label><input id="new-user-name" class="form-control" placeholder="..."/></div>
+      <div class="form-group">
+        <label class="form-label">Nombre de usuario</label>
+        <input id="new-user-username" class="form-control" placeholder="..."/>
+        <div class="form-hint">Solo letras minúsculas, números y guión bajo</div>
+      </div>
+      <div class="form-group"><label class="form-label">Contraseña (mínimo 6 caracteres)</label><input id="new-user-pass" type="password" class="form-control" placeholder="••••••••"/></div>
+      <!-- Área — aparece para supervisor (obligatorio) y operador admin -->
+      <div class="form-group" id="new-user-area-group" style="display:none">
+        <label class="form-label">Área</label>
+        <select id="new-user-area" class="form-control" onchange="onNewUserAreaChange()">
+          <option value="">— Sin área —</option>
+          <option value="conservacion">Conservación</option>
+          <option value="urin">URIN</option>
+          <option value="mortalidad">Mortalidad</option>
+        </select>
+        <div class="form-hint" id="new-user-area-hint"></div>
+      </div>
+      <div class="form-group" id="new-user-role-group">
+        <label class="form-label">Rol</label>
+        <select id="new-user-role" class="form-control" onchange="onNewUserRoleChange()">
+          <option value="operador">Operador</option>
+          <option value="supervisor" class="admin-only-role">Supervisor</option>
+          <option value="admin" class="admin-only-role">Administrador</option>
+        </select>
+        <div class="form-hint" id="new-user-role-hint"></div>
+      </div>
+      <!-- Asignar supervisor (solo cuando el rol es operador y quien crea es admin) -->
+      <div class="form-group" id="new-user-supervisor-group" style="display:none">
+        <label class="form-label">Asignar a supervisor</label>
+        <select id="new-user-supervisor" class="form-control">
+          <option value="">— Sin asignar —</option>
+        </select>
+        <div class="form-hint">El operador solo verá los datos del supervisor asignado</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-user')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUser()">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cambiar contraseña -->
+<div class="modal-bg" id="modal-change-pass">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title">Cambiar Contraseña</div>
+      <button class="modal-close" onclick="closeModal('modal-change-pass')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--text-md);margin-bottom:1rem">Usuario: <strong id="chpass-user"></strong></p>
+      <input type="hidden" id="chpass-uid"/>
+      <div class="form-group">
+        <label class="form-label">Nueva contraseña (mínimo 6 caracteres)</label>
+        <input id="chpass-new" type="password" class="form-control" placeholder="••••••••"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-change-pass')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveChangePassword()">Guardar contraseña</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reasignar supervisor de un operador -->
+<div class="modal-bg" id="modal-reassign-sup">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title">Reasignar Supervisor</div>
+      <button class="modal-close" onclick="closeModal('modal-reassign-sup')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--text-md);margin-bottom:1rem">
+        Operador: <strong id="reassign-user-label"></strong>
+      </p>
+      <input type="hidden" id="reassign-uid"/>
+      <input type="hidden" id="reassign-uid-area"/>
+      <div class="form-group">
+        <label class="form-label">Nuevo supervisor</label>
+        <select id="reassign-supervisor" class="form-control">
+          <option value="">— Sin asignar —</option>
+        </select>
+        <div class="form-hint">Al cambiar de supervisor, el operador dejará de ver los datos del anterior.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reassign-sup')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReassignSupervisor()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: NUEVO / EDITAR EXPEDIENTE ══ -->
+<div class="modal-bg" id="modal-exp">
+  <div class="modal modal-wide">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,#dc2626,#f87171)"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="exp-modal-title">Nuevo Expediente</div>
+      <button class="modal-close" onclick="closeModal('modal-exp')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="exp-edit-id"/>
+
+      <!-- ── Datos generales ── -->
+      <div class="form-section-title">Datos generales</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Especie <span style="color:var(--red)">*</span></label>
+          <select id="exp-especie" class="form-control" onchange="genExpId()">
+            <option value="">— Selecciona —</option>
+            <option>Herichthys cyanoguttatus</option><option>Oreochromis niloticus</option>
+            <option>Carassius auratus</option><option>Astyanax mexicanus</option>
+            <option>Cyprinus carpio koi</option><option>Danio rerio</option>
+            <option>Poecilia reticulata</option><option>Trichogaster trichopterus</option>
+            <option>Cichlasoma sp.</option><option>Lepisosteus sp.</option>
+            <option>Cyprinodon albivelis</option><option>Cyprinodon bobmilleri</option>
+            <option>Cyprinella formosa</option><option>Ameca splendens</option>
+            <option>Xenotoca eiseni</option><option>Xenotoca doiadrioi</option>
+            <option>Xenotoca variata</option><option>Xenoophorus captivus</option>
+            <option>Goodea atripinnis</option><option>Gila modesta</option>
+            <option>Xiphophorus maculatus</option><option>Xiphophorus couchianus</option>
+            <option>Xiphophorus variatus</option><option>Xiphophorus cf regio</option>
+            <option>Poecilia mexicana</option><option>Herichthys carpintis</option>
+            <option>Thorichthys meeki</option><option>Poecilidos</option>
+            <option>Herichthys minckleyi</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Fecha <span style="color:var(--red)">*</span></label>
+          <input id="exp-fecha" type="date" class="form-control" onchange="genExpId()"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">ID (auto-generado)</label>
+          <input id="exp-id-display" class="form-control" readonly
+                 style="background:var(--bg-main);font-weight:700;color:var(--brand);font-family:var(--ff-mono)"/>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-top:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Cantidad <span style="color:var(--red)">*</span></label>
+          <input id="exp-cantidad" type="number" min="1" class="form-control" placeholder="1"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Área <span style="color:var(--red)">*</span></label>
+          <select id="exp-area" class="form-control">
+            <option value="">— Selecciona —</option>
+            <option>Conservación</option>
+            <option>Aprovechamiento</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Acuario / Pileta <span style="color:var(--red)">*</span></label>
+          <input id="exp-acuario" class="form-control" list="acuarios-list" placeholder="Escribe o selecciona…"/>
+          <datalist id="acuarios-list">
+            <option>1-IV</option><option>1A1</option><option>1A4</option><option>1B1</option><option>1B2</option><option>1B3</option><option>2A3</option><option>2B</option><option>2B1</option><option>2B2</option><option>2B3</option><option>2B4</option><option>2C2</option><option>3A1</option><option>3B1</option><option>3C1</option><option>3D</option><option>4B1</option><option>4C1</option><option>5A1</option><option>5A2</option><option>5C1</option><option>5C2</option><option>6B2</option><option>A1</option><option>A5</option><option>A6</option><option>B1</option><option>B2</option><option>B3</option><option>B4</option><option>B5</option><option>B6</option><option>B7</option><option>B8</option><option>C2</option><option>C3</option><option>C4</option><option>C5</option><option>C8</option><option>C9</option><option>D1</option><option>D2</option><option>D3</option><option>D4</option><option>D7</option><option>D8</option><option>E1</option><option>E2</option><option>E3</option><option>E4</option><option>E5</option><option>E7</option><option>E8</option><option>F1</option><option>F2</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>IA2</option><option>IA3</option><option>IB1</option><option>IB2</option><option>IIA2</option><option>IIA3</option><option>IIB2</option><option>IIIA1</option><option>IIIA2</option><option>IIIA3</option><option>IIIA4</option><option>IVB1</option><option>PA1</option><option>PA2</option><option>PA5</option><option>PA7</option><option>PB1</option><option>PB2</option><option>PB3</option><option>PB4</option><option>PB5</option><option>PB7</option><option>PC1</option><option>PC2</option><option>PC3</option><option>PC4</option><option>PC7</option><option>PD1</option><option>PE1</option><option>PE3</option><option>PE4</option><option>V7</option><option>VB1</option><option>VB2</option><option>VB3</option><option>VB5</option><option>VB6</option><option>VB11</option><option>VB13</option>
+          </datalist>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Colectó</label>
+          <input id="exp-colecto" class="form-control" placeholder="Nombre del responsable"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Entregó</label>
+          <input id="exp-entrego" class="form-control" placeholder="Nombre del responsable"/>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Se procede a</label>
+          <select id="exp-proceso" class="form-control">
+            <option value="">— Selecciona —</option>
+            <option>Desecho</option>
+            <option>Microbiológico</option>
+            <option>Parasitológico</option>
+            <option>Microbiológico, Parasitológico</option>
+            <option>Microbiológico, Micológico, Parasitológico</option>
+            <option>Microbiológico, Parasitológico, Micológico</option>
+            <option>Microbiológico, Desecho</option>
+            <option>Microbiológico, Parasitológico, Desecho</option>
+            <option>Parasitológico, Micológico</option>
+            <option>Desecho, Microbiológico</option>
+            <option>Parasitológico, Microbiológico</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Observaciones</label>
+          <textarea id="exp-obs" class="form-control" style="min-height:36px" placeholder="…"></textarea>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Realizó proceso</label>
+          <input id="exp-realizo-proceso" class="form-control" placeholder="Nombre(s)"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Realizó ficha</label>
+          <input id="exp-realizo-ficha" class="form-control" placeholder="Nombre(s)"/>
+        </div>
+      </div>
+
+      <!-- ── Microbiológico ── -->
+      <div class="form-section-title" style="margin-top:1.2rem">
+        Microbiológico
+        <span style="font-size:.72rem;font-weight:400;color:var(--text-lt);margin-left:.5rem">5 tubos</span>
+      </div>
+      <div id="micro-tubos-wrap" style="display:grid;gap:.4rem">
+        <!-- generado por JS -->
+      </div>
+
+      <!-- ── Parasitológico ── -->
+      <div class="form-section-title" style="margin-top:1.2rem">Parasitológico</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem">
+        <div class="form-group" style="margin:0"><label class="form-label">Tremátodos</label><input id="par-trematodos" class="form-control" placeholder="Negativo / localización"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Céstodos</label><input id="par-cestodos" class="form-control" placeholder="Negativo / localización"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Nemátodos</label><input id="par-nematodos" class="form-control" placeholder="Negativo / localización"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Acantocéfalos</label><input id="par-acanto" class="form-control" placeholder="Negativo / localización"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Sanguijuelas</label><input id="par-sangui" class="form-control" placeholder="Negativo / localización"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Copépodos</label><input id="par-cope" class="form-control" placeholder="Negativo / localización"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.4rem;margin-top:.4rem">
+        <div class="form-group" style="margin:0"><label class="form-label">Fases juveniles</label><input id="par-fases-juv" class="form-control" placeholder="…"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Estado</label><input id="par-estado1" class="form-control" placeholder="…"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Larvas de</label><input id="par-larvas" class="form-control" placeholder="…"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Estado (larvas)</label><input id="par-estado2" class="form-control" placeholder="…"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-top:.4rem">
+        <div class="form-group" style="margin:0"><label class="form-label">Protozoarios</label><input id="par-protozoo" class="form-control" placeholder="Negativo / localización"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Fijador usado</label><input id="par-fijador" class="form-control" placeholder="…"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Preservador usado</label><input id="par-preservador" class="form-control" placeholder="…"/></div>
+      </div>
+
+      <!-- ── Micológico ── -->
+      <div class="form-section-title" style="margin-top:1.2rem">Micológico</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem">
+        <div class="form-group" style="margin:0"><label class="form-label">Toma</label><input id="mic-toma" class="form-control" placeholder="…"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Colorante</label><input id="mic-colorante" class="form-control" placeholder="…"/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Observado</label><input id="mic-observado" class="form-control" placeholder="…"/></div>
+      </div>
+
+    </div><!-- /modal-body -->
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-exp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveExp()">Guardar expediente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: VER EXPEDIENTE (detalle completo) ══ -->
+<div class="modal-bg" id="modal-exp-detail">
+  <div class="modal modal-wide">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,#dc2626,#f87171)"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="exp-detail-title">Expediente</div>
+      <button class="modal-close" onclick="closeModal('modal-exp-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="exp-detail-body"></div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost" onclick="editExpFromDetail()">Editar</button>
+        <button class="btn btn-danger" onclick="deleteExpFromDetail()">✕ Eliminar</button>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('modal-exp-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: INICIAR SESIÓN DE MEDICIÓN ══ -->
+<div class="modal-bg" id="modal-iniciar-sesion">
+  <div class="modal">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,#0891b2,#06b6d4)"></div>
+    <div class="modal-header">
+      <div class="modal-title">Iniciar sesión de medición</div>
+      <button class="modal-close" onclick="closeModal('modal-iniciar-sesion')">✕</button>
+    </div>
+    <div class="modal-body">
+<!-- Participantes actuales -->
+      <div class="form-group">
+        <label class="form-label">Realizando la medición</label>
+        <div id="sesion-participantes" style="display:flex;flex-wrap:wrap;gap:.4rem;min-height:2rem;margin-bottom:.5rem"></div>
+      </div>
+
+      <!-- Agregar persona -->
+      <div class="form-group" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:.75rem">
+        <label class="form-label" style="color:#1d4ed8">Agregar participante</label>
+        <div style="display:flex;gap:.5rem">
+          <input id="add-part-usuario" class="form-control" placeholder="Usuario…" style="flex:1" autocomplete="off"/>
+          <input id="add-part-pass"    class="form-control" type="password" placeholder="Contraseña" style="flex:1"/>
+          <button class="btn btn-primary btn-sm" onclick="agregarParticipante()">Agregar</button>
+        </div>
+        <div id="add-part-error" style="display:none;color:var(--red);font-size:.78rem;margin-top:.3rem"></div>
+      </div>
+
+      <!-- Fecha -->
+      <div class="form-group">
+        <label class="form-label">Fecha de medición</label>
+        <input id="sesion-fecha" type="date" class="form-control"/>
+      </div>
+
+      <!-- Área para esta sesión -->
+      <div class="form-group">
+        <label class="form-label">Área / subsección <span style="color:var(--red)">*</span></label>
+        <select id="sesion-area" class="form-control" onchange="onSesionAreaChange()">
+          <option value="">— Selecciona —</option>
+          <option value="conservacion_piletas">Conservación — Piletas</option>
+          <option value="conservacion_tc">Conservación — Temp. Controlada</option>
+          <option value="conservacion_frio">Conservación — Temperaria Fría</option>
+          <option value="urin_tc">URIN — Temp. Controlada</option>
+          <option value="urin_piletas">URIN — Piletas Exterior</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-iniciar-sesion')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarSesion()">Comenzar medición →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: REGISTRAR PARÁMETRO ══ -->
+<div class="modal-bg" id="modal-registrar-param">
+  <div class="modal">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,#0891b2,#06b6d4)"></div>
+    <div class="modal-header">
+      <div class="modal-title">Registrar parámetro</div>
+      <button class="modal-close" onclick="closeModal('modal-registrar-param')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Info sesión -->
+      <div id="param-sesion-info" class="info-box" style="margin-bottom:1rem;font-size:.82rem"></div>
+
+      <!-- Sector + Pileta dependientes del área -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label" id="param-sector-label">Sector</label>
+          <select id="param-sector" class="form-control" onchange="onParamSectorChange()">
+            <option value="">— Selecciona —</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Pileta / Acuario <span style="color:var(--red)">*</span></label>
+          <input id="param-pileta" class="form-control" list="piletas-sugeridas" placeholder="Ej: B1, IA2…" autocomplete="off"/>
+          <datalist id="piletas-sugeridas"></datalist>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="registrarSectorCompleto()" title="Carga todas las piletas del sector en cola y avanza automáticamente">⚡ Registrar sector completo</button>
+        <div id="param-progreso" style="display:none;font-size:.78rem;font-weight:700;color:var(--brand);padding:.2rem .6rem;background:var(--brand-lt);border-radius:99px"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.5rem">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">pH <span style="color:var(--red)">*</span></label>
+          <input id="param-ph" type="number" step="0.01" min="0" max="14" class="form-control" placeholder="7.50"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Temp. °C <span style="color:var(--red)">*</span></label>
+          <input id="param-temp" type="number" step="0.1" class="form-control" placeholder="22.5"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-ghost" onclick="cerrarSesion()">Terminar sesión</button>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost" onclick="closeModal('modal-registrar-param')">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarParametro()">Guardar y continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: CAMBIAR ÁREA DE SUPERVISOR ══ -->
+<div class="modal-bg" id="modal-cambiar-area">
+  <div class="modal">
+    <div class="modal-stripe"></div>
+    <div class="modal-header">
+      <div class="modal-title">Cambiar área</div>
+      <button class="modal-close" onclick="closeModal('modal-cambiar-area')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:var(--text-md);margin-bottom:1rem">
+        Usuario: <strong id="cambiar-area-user"></strong>
+      </p>
+      <div class="info-box" style="margin-bottom:1rem">
+        Al cambiar de área el supervisor (y sus operadores) perderán acceso a los datos de la anterior.
+      </div>
+      <input type="hidden" id="cambiar-area-uid"/>
+      <div class="form-group">
+        <label class="form-label">Nueva área</label>
+        <select id="cambiar-area-nueva" class="form-control">
+          <option value="">— Sin área —</option>
+          <option value="conservacion">Conservación</option>
+          <option value="urin">URIN</option>
+          <option value="mortalidad">Mortalidad</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cambiar-area')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCambioArea()">Cambiar área</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: GESTIONAR ÁREAS / SECTORES / PILETAS ══ -->
+<div class="modal-bg" id="modal-gestion-areas">
+  <div class="modal modal-wide">
+    <div class="modal-stripe" style="background:linear-gradient(90deg,#0891b2,#06b6d4)"></div>
+    <div class="modal-header">
+      <div class="modal-title">Gestionar áreas, sectores y piletas</div>
+      <button class="modal-close" onclick="closeModal('modal-gestion-areas')">✕</button>
+    </div>
+    <div class="modal-body" id="gestion-areas-body">
+      <p style="color:var(--text-lt);font-size:.82rem">Cargando…</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-gestion-areas')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
